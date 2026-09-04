@@ -1,12 +1,10 @@
 import * as React from "react";
 import {FC} from "react";
-import TableCell from "@material-ui/core/TableCell";
 import {useNavigate} from "react-router-dom";
 import {SolutionDto} from "api";
-import {Chip, Stack, Tooltip} from "@mui/material";
+import {Box, Chip, Stack, TableCell, Tooltip} from "@mui/material";
 import StudentStatsUtils from "../../services/StudentStatsUtils";
 import Utils from "../../services/Utils";
-import {grey} from "@material-ui/core/colors";
 import "../Courses/Styles/StudentStatsCell.css";
 
 interface ITaskStudentCellProps {
@@ -16,14 +14,18 @@ interface ITaskStudentCellProps {
     userId: string;
     taskMaxRating: number;
     isBestSolution: boolean;
+    // Задача ещё не опубликована: переходить к решению не к чему, так как студент задачу не видел
+    isDeferred?: boolean;
     solutions?: SolutionDto[];
+    disabled?: boolean;
 }
 
 const StudentStatsCell: FC<ITaskStudentCellProps & { borderLeftColor?: string }> = (props) => {
     const navigate = useNavigate()
-    const {solutions, taskMaxRating, forMentor} = props
+    const {solutions, taskMaxRating, forMentor, disabled, isDeferred} = props
+    const isClickable = !disabled && !isDeferred
 
-    const cellState = StudentStatsUtils.calculateLastRatedSolutionInfo(solutions!, taskMaxRating)
+    const cellState = StudentStatsUtils.calculateLastRatedSolutionInfo(solutions!, taskMaxRating, disabled, isDeferred)
 
     const {ratedSolutionsCount, solutionsDescription} = cellState;
 
@@ -36,25 +38,35 @@ const StudentStatsCell: FC<ITaskStudentCellProps & { borderLeftColor?: string }>
     const result = cellState.lastRatedSolution === undefined
         ? ""
         : <Stack direction="row" spacing={0.3} justifyContent={"center"} alignItems={"center"}>
-            <div>{cellState.lastRatedSolution.rating!}</div>
+            <Box component={"span"} sx={{fontVariantNumeric: "tabular-nums"}}>
+                {cellState.lastRatedSolution.rating!}
+            </Box>
             <Chip color={"default"} size={"small"} label={ratedSolutionsCount}/>
         </Stack>;
 
-    const handleCellClick = (e: React.MouseEvent) => {
-        // Формируем URL
-        const url = forMentor
-            ? `/task/${props.taskId}/${props.studentId}`
-            : `/task/${props.taskId}`
-        // Проверяем, была ли нажата Ctrl/Cmd
-        const isSpecialClick = e.ctrlKey || e.metaKey;
+    const solutionUrl = forMentor
+        ? `/task/${props.taskId}/${props.studentId}`
+        : `/task/${props.taskId}`
 
-        if (isSpecialClick) {
-            // Открываем в новой вкладке
-            window.open(url, '_blank', 'noopener,noreferrer');
+    const openInNewTab = () => window.open(solutionUrl, '_blank', 'noopener,noreferrer');
+
+    const handleCellClick = (e: React.MouseEvent) => {
+        if (!isClickable) return;
+
+        // Ctrl/Cmd + клик — открываем в новой вкладке
+        if (e.ctrlKey || e.metaKey) {
+            openInNewTab();
         } else {
-            // Переходим в текущей вкладке
-            navigate(url);
+            navigate(solutionUrl);
         }
+    };
+
+    // Средняя кнопка мыши — открываем в новой вкладке
+    const handleCellAuxClick = (e: React.MouseEvent) => {
+        if (!isClickable || e.button !== 1) return;
+
+        e.preventDefault();
+        openInNewTab();
     };
 
     return (
@@ -62,16 +74,22 @@ const StudentStatsCell: FC<ITaskStudentCellProps & { borderLeftColor?: string }>
                  title={<span style={{whiteSpace: 'pre-line'}}>{tooltipTitle}</span>}>
             <TableCell
                 onClick={handleCellClick}
+                onAuxClick={handleCellAuxClick}
+                onMouseDown={e => {
+                    if (isClickable && e.button === 1) e.preventDefault();
+                }}
                 className={props.isBestSolution ? "glow-cell" : ""}
-                component="td"
-                padding="none"
-                variant={"body"}
-                scope="row"
                 align="center"
-                style={{
+                sx={{
+                    p: 0,
+                    minWidth: 76,
                     backgroundColor: cellState.color,
-                    borderLeft: `1px solid ${props.borderLeftColor || grey[300]}`,
-                    cursor: "pointer",
+                    borderLeft: `1px solid ${props.borderLeftColor || "#eceef3"}`,
+                    borderBottom: "1px solid #eceef3",
+                    cursor: isClickable ? "pointer" : "default",
+                    transition: "box-shadow .12s",
+                    // Подсветка кликабельной ячейки: обводка внутрь, чтобы не спорить с цветовым кодированием оценки
+                    ...(isClickable ? {"&:hover": {boxShadow: "inset 0 0 0 2px #3f51b5"}} : {}),
                 }}>
                 {result}
             </TableCell>

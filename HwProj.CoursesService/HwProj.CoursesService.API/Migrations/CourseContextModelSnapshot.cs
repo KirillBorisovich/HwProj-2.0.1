@@ -128,6 +128,9 @@ namespace HwProj.CoursesService.API.Migrations
                     b.Property<int>("MaxPoints")
                         .HasColumnType("int");
 
+                    b.Property<string>("Arguments")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Name")
                         .HasColumnType("nvarchar(max)");
 
@@ -201,6 +204,9 @@ namespace HwProj.CoursesService.API.Migrations
 
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<long?>("GroupId")
+                        .HasColumnType("bigint");
 
                     b.Property<bool>("HasDeadline")
                         .HasColumnType("bit");
@@ -343,13 +349,13 @@ namespace HwProj.CoursesService.API.Migrations
                     b.Property<long>("CourseId")
                         .HasColumnType("bigint");
 
-                    b.Property<string>("UserId")
+                    b.Property<string>("Id")
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<long>("CourseFilterId")
                         .HasColumnType("bigint");
 
-                    b.HasKey("CourseId", "UserId");
+                    b.HasKey("CourseId", "Id");
 
                     b.HasIndex("CourseFilterId");
 
